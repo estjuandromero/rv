@@ -147,18 +147,16 @@
 
       <!-- =========================================================
            PARTE D - Integración de modelo CAD (SolidWorks -> Blender -> GLB)
-           Ensamblaje "grúa" (1,228 triángulos, ~223x120x70 mm).
-           scale="0.001..." convierte de milímetros (unidad de
-           SolidWorks) a metros (unidad de A-Frame). Se ubica a un
-           costado de la celda industrial para no encimarse.
-           Requiere haber centrado el origen del modelo en Blender
-           (Object > Set Origin > Origin to Geometry + Alt+G) antes
-           de exportar a GLB.
+           Ensamblaje "grúa" (1,228 triángulos). El archivo modelo.glb
+           ya viene centrado en el origen, orientado con Y hacia
+           arriba y convertido a metros. Se escala x4 para que sea
+           claramente visible junto a la celda industrial (el modelo
+           real mide solo ~22 cm de largo).
            ========================================================= -->
       <a-entity
         gltf-model="#modeloIndustrial"
-        position="12 0 -4"
-        scale="0.001 0.001 0.001">
+        position="12 0.14 -4"
+        scale="4 4 4">
       </a-entity>
 
       <!-- =========================================================
