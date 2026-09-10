@@ -86,10 +86,20 @@
            Y hacia arriba y convertido a metros. Escala 1:1 (tamaño
            real del ensamblaje: ~22.3 x 20 x 12 cm).
            ========================================================= -->
+      <!-- =========================================================
+           PARTE D - Integración de modelo CAD (SolidWorks -> Blender -> GLB)
+           Esta página muestra ÚNICAMENTE el modelo CAD (ensamblaje
+           completo de la grúa, 5,608 triángulos), sin la celda
+           industrial de primitivas (esa está en index.html).
+           Escalado x5 para verse grande. rotation="180 0 0" corrige
+           la orientación (el modelo quedaba boca abajo con la
+           conversión de ejes original).
+           ========================================================= -->
       <a-entity
         gltf-model="#modeloIndustrial"
-        position="0 0.0998 2"
-        scale="1 1 1">
+        position="0 0.5 1"
+        rotation="180 0 0"
+        scale="5 5 5">
       </a-entity>
 
       <!-- =========================================================
