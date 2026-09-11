@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Laboratorio XR - Fase 2: Celda Industrial</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.1/dist/aframe-master.min.js"></script>
+    <style>
+      #boton-vr, #boton-ar {
+        position: fixed;
+        bottom: 24px;
+        z-index: 999999;
+        padding: 14px 24px;
+        font-size: 16px;
+        font-weight: bold;
+        font-family: Arial, sans-serif;
+        color: #ffffff;
+        border: none;
+        border-radius: 30px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      }
+      #boton-vr {
+        left: 50%;
+        transform: translateX(calc(-100% - 8px));
+        background: #EF2D5E;
+      }
+      #boton-ar {
+        left: 50%;
+        transform: translateX(8px);
+        background: #4CC3D9;
+      }
+      #enlace-nav {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 999999;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-family: Arial, sans-serif;
+        color: #333333;
+        background: rgba(255,255,255,0.85);
+        border-radius: 20px;
+        text-decoration: none;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      }
+      #enlace-nav-2 {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 999999;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-family: Arial, sans-serif;
+        color: #333333;
+        background: rgba(255,255,255,0.85);
+        border-radius: 20px;
+        text-decoration: none;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Enlaces para navegar entre las 3 fases -->
+    <a id="enlace-nav" href="index.html">← Fase 1: Figuras</a>
+    <a id="enlace-nav-2" href="cad.html">Fase 3: Modelo CAD →</a>
+    <!-- Botones grandes y visibles para entrar en modo VR y AR.
+         No dependen del ícono pequeño que A-Frame agrega
+         automáticamente (que a veces no aparece según el
+         navegador/celular). El modo AR requiere un navegador con
+         soporte WebXR "immersive-ar" (Chrome en Android con ARCore,
+         o el navegador del Meta Quest 3). No funciona en Safari/iOS. -->
+    <button id="boton-vr">Entrar en modo VR</button>
+    <button id="boton-ar">Entrar en modo AR</button>
+
+    <a-scene webxr="optionalFeatures: local-floor, hit-test;" renderer="alpha: true;">
+
+      <!-- =========================================================
+           A-ASSETS
+           Aquí se precargan los recursos de la escena. Cuando se
+           realice la Parte D (integración de modelo CAD), el
+           archivo .glb exportado desde Blender debe copiarse a
+           la carpeta /models y referenciarse aquí.
+           ========================================================= -->
+      <a-assets>
+        <!-- Parte D: el modelo CAD se integró en un archivo separado,
+             cad.html, para no modificar esta versión que ya funciona. -->
+        <!-- <a-asset-item id="modeloIndustrial" src="models/modelo.glb"></a-asset-item> -->
+      </a-assets>
+
+      <!-- =========================================================
+           PARTE C - Modelo industrial con primitivas
+           Celda de manufactura compuesta por:
+             - Banda transportadora (a-box)
+             - Tanque de almacenamiento (a-cylinder)
+             - Brazo robotizado articulado (a-cylinder + a-box, jerarquía padre-hijo)
+             - Sensores/indicadores (a-sphere)
+           Esta página (planta.html) contiene ÚNICAMENTE la Fase 2:
+           el modelo industrial. La Fase 1 (primitivas básicas) está
+           en index.html, y la Fase 3 (modelo CAD) en cad.html.
+           ========================================================= -->
+
+      <!-- Piso de la planta -->
+      <a-plane id="piso" rotation="-90 0 0" width="24" height="24" color="#7BC8A4"></a-plane>
+      <a-sky id="cielo" color="#ECECEC"></a-sky>
+
+      <!-- ---- Grupo: Banda transportadora ---- -->
+      <a-entity id="banda-transportadora" position="0 0 -6">
+        <!-- Estructura / cuerpo de la banda (a-box = azul) -->
+        <a-box position="0 0.5 0" width="6" height="0.2" depth="1.2" color="#4CC3D9"></a-box>
+        <!-- Patas de soporte (a-cylinder = amarillo) -->
+        <a-cylinder position="-2.5 0.25 0" radius="0.08" height="0.5" color="#FFC65D"></a-cylinder>
+        <a-cylinder position="2.5 0.25 0" radius="0.08" height="0.5" color="#FFC65D"></a-cylinder>
+        <!-- Rodillos en los extremos (a-cylinder = amarillo): la
+             orientación (rotation 0 0 90) va en la entidad
+             contenedora; el cilindro hijo gira sobre su propio eje Y
+             local, que tras esa orientación queda alineado con el
+             eje horizontal (efecto de "rodillo girando"). -->
+        <a-entity position="-3 0.6 0" rotation="0 0 90">
+          <a-cylinder radius="0.2" height="1.4" color="#FFC65D"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 800; easing: linear">
+          </a-cylinder>
+        </a-entity>
+        <a-entity position="3 0.6 0" rotation="0 0 90">
+          <a-cylinder radius="0.2" height="1.4" color="#FFC65D"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 800; easing: linear">
+          </a-cylinder>
+        </a-entity>
+        <!-- Pieza transportada (a-box = azul): se desliza de un
+             extremo a otro de la banda, simulando el material en
+             movimiento -->
+        <a-box position="-2.5 0.7 0" width="0.4" height="0.3" depth="0.4" color="#4CC3D9"
+          animation="property: position; from: -2.5 0.7 0; to: 2.5 0.7 0; dir: alternate; loop: true; dur: 3000; easing: linear">
+        </a-box>
+      </a-entity>
+
+      <!-- ---- Grupo: Tanque de almacenamiento ---- -->
+      <a-entity id="tanque-almacenamiento" position="5 0 -8">
+        <!-- Base / plataforma (a-box = azul) -->
+        <a-box position="0 0.15 0" width="2.4" height="0.3" depth="2.4" color="#4CC3D9"></a-box>
+        <!-- Cuerpo del tanque (a-cylinder = amarillo) -->
+        <a-cylinder position="0 1.5 0" radius="1" height="2.4" color="#FFC65D"></a-cylinder>
+        <!-- Tapa superior (a-cylinder = amarillo) -->
+        <a-cylinder position="0 2.75 0" radius="1.05" height="0.1" color="#FFC65D"></a-cylinder>
+        <!-- Indicador de nivel (a-sphere = rojo) -->
+        <a-sphere position="1.15 1.8 0" radius="0.12" color="#EF2D5E"></a-sphere>
+      </a-entity>
+
+      <!-- ---- Grupo: Brazo robotizado (jerarquía padre-hijo anidada) ---- -->
+      <a-entity id="brazo-robot" position="-5 0 -8">
+        <!-- Base fija (a-cylinder = amarillo) -->
+        <a-cylinder position="0 0.3 0" radius="0.8" height="0.6" color="#FFC65D"></a-cylinder>
+
+        <!-- Eslabón 1: gira sobre la base (a-cylinder = amarillo).
+             Rotación oscilante en Y simula el giro de la torreta. Al
+             mover este eslabón, TODO lo que cuelga de él (eslabón 2
+             y el efector) se mueve junto con él, demostrando la
+             jerarquía padre-hijo. -->
+        <a-entity id="eslabon-1" position="0 0.6 0" rotation="0 20 0"
+          animation="property: rotation; from: -40 20 0; to: 40 20 0; dir: alternate; loop: true; dur: 2500; easing: easeInOutSine">
+          <a-cylinder position="0 0.5 0" radius="0.25" height="1" color="#FFC65D"></a-cylinder>
+
+          <!-- Eslabón 2: hijo del eslabón 1, sube y baja como un
+               codo articulado (a-box = azul) -->
+          <a-entity id="eslabon-2" position="0 1 0" rotation="0 0 -30"
+            animation="property: rotation; from: 0 0 -50; to: 0 0 -10; dir: alternate; loop: true; dur: 1800; easing: easeInOutSine">
+            <a-box position="0 0.6 0" width="0.3" height="1.2" depth="0.3" color="#4CC3D9"></a-box>
+
+            <!-- Efector final: hijo del eslabón 2, pequeño ajuste
+                 propio para simular la "muñeca" (a-sphere = rojo) -->
+            <a-entity id="efector-final" position="0 1.2 0" rotation="0 0 20"
+              animation="property: rotation; from: 0 0 -10; to: 0 0 50; dir: alternate; loop: true; dur: 1200; easing: easeInOutSine">
+              <a-sphere radius="0.2" color="#EF2D5E"></a-sphere>
+            </a-entity>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+
+      <!-- =========================================================
+           CÁMARA Y CONTROLES
+           wasd-controls + look-controls: navegación en escritorio.
+           cursor: permite interacción por mirada en móvil/VR/Quest.
+           ========================================================= -->
+      <a-entity id="rig" position="0 1.6 4">
+        <a-camera position="0 0 0" wasd-controls look-controls>
+          <a-cursor color="#FFFFFF"></a-cursor>
+        </a-camera>
+      </a-entity>
+
+    </a-scene>
+
+    <script>
+      // Conecta los botones visibles con la entrada a modo VR y AR
+      // de A-Frame. Se espera a que la escena esté completamente
+      // cargada antes de habilitar los botones.
+      document.addEventListener('DOMContentLoaded', function () {
+        var escena = document.querySelector('a-scene');
+        var botonVR = document.getElementById('boton-vr');
+        var botonAR = document.getElementById('boton-ar');
+        var piso = document.getElementById('piso');
+        var cielo = document.getElementById('cielo');
+
+        // Guardamos una referencia al padre de piso/cielo (el propio
+        // <a-scene>) para poder volver a insertarlos al salir de AR.
+        var contenedor = escena;
+
+        botonVR.addEventListener('click', function () {
+          if (escena.is('vr-mode')) {
+            escena.exitVR();
+          } else {
+            escena.enterVR();
+          }
+        });
+
+        botonAR.addEventListener('click', function () {
+          if (escena.is('ar-mode')) {
+            escena.exitVR();
+          } else {
+            escena.enterAR();
+          }
+        });
+
+     
+        escena.addEventListener('enter-vr', function () {
+          if (escena.is('ar-mode')) {
+            botonAR.textContent = 'Salir de AR';
+            if (piso.parentNode) contenedor.removeChild(piso);
+            if (cielo.parentNode) contenedor.removeChild(cielo);
+            if (escena.renderer) {
+              escena.renderer.setClearColor('#000000', 0);
+              escena.renderer.setClearAlpha(0);
+            }
+          } else {
+            botonVR.textContent = 'Salir de VR';
+          }
+        });
+
+        escena.addEventListener('exit-vr', function () {
+          botonVR.textContent = 'Entrar en modo VR';
+          botonAR.textContent = 'Entrar en modo AR';
+          if (!piso.parentNode) contenedor.appendChild(piso);
+          if (!cielo.parentNode) contenedor.appendChild(cielo);
+          if (escena.renderer) {
+            escena.renderer.setClearAlpha(1);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
