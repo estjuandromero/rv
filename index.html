@@ -29,9 +29,25 @@
         transform: translateX(8px);
         background: #4CC3D9;
       }
+      #enlace-nav {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 999999;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-family: Arial, sans-serif;
+        color: #333333;
+        background: rgba(255,255,255,0.85);
+        border-radius: 20px;
+        text-decoration: none;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      }
     </style>
   </head>
   <body>
+    <!-- Enlace para pasar a la versión con el modelo CAD integrado -->
+    <a id="enlace-nav" href="cad.html">Ver versión con modelo CAD →</a>
     <!-- Botones grandes y visibles para entrar en modo VR y AR.
          No dependen del ícono pequeño que A-Frame agrega
          automáticamente (que a veces no aparece según el
@@ -51,7 +67,8 @@
            la carpeta /models y referenciarse aquí.
            ========================================================= -->
       <a-assets>
-        <!-- Parte D: descomentar cuando exista el archivo models/modelo.glb -->
+        <!-- Parte D: el modelo CAD se integró en un archivo separado,
+             cad.html, para no modificar esta versión que ya funciona. -->
         <!-- <a-asset-item id="modeloIndustrial" src="models/modelo.glb"></a-asset-item> -->
       </a-assets>
 
@@ -61,7 +78,7 @@
            desplazada a un costado para no chocar con la celda
            industrial de la Parte C.
            ========================================================= -->
-      <a-entity id="parte-a-ejemplo" position="-8 0 0">
+      <a-entity id="parte-a-ejemplo" position="-8 0 5">
         <a-box position="0 1 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
         <a-sphere position="2 1 -4" radius="1" color="#EF2D5E"></a-sphere>
         <a-cylinder position="-2 1 -4" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
@@ -82,45 +99,70 @@
 
       <!-- ---- Grupo: Banda transportadora ---- -->
       <a-entity id="banda-transportadora" position="0 0 -4">
-        <!-- Estructura / cuerpo de la banda -->
+        <!-- Estructura / cuerpo de la banda (a-box = azul) -->
         <a-box position="0 0.5 0" width="6" height="0.2" depth="1.2" color="#4CC3D9"></a-box>
-        <!-- Patas de soporte -->
-        <a-cylinder position="-2.5 0.25 0" radius="0.08" height="0.5" color="#555555"></a-cylinder>
-        <a-cylinder position="2.5 0.25 0" radius="0.08" height="0.5" color="#555555"></a-cylinder>
-        <!-- Rodillos en los extremos -->
-        <a-cylinder position="-3 0.6 0" rotation="0 0 90" radius="0.2" height="1.4" color="#FFC65D"></a-cylinder>
-        <a-cylinder position="3 0.6 0" rotation="0 0 90" radius="0.2" height="1.4" color="#FFC65D"></a-cylinder>
-        <!-- Sensor de presencia sobre la banda -->
-        <a-sphere position="0 1.1 0" radius="0.15" color="#EF2D5E"></a-sphere>
+        <!-- Patas de soporte (a-cylinder = amarillo) -->
+        <a-cylinder position="-2.5 0.25 0" radius="0.08" height="0.5" color="#FFC65D"></a-cylinder>
+        <a-cylinder position="2.5 0.25 0" radius="0.08" height="0.5" color="#FFC65D"></a-cylinder>
+        <!-- Rodillos en los extremos (a-cylinder = amarillo): la
+             orientación (rotation 0 0 90) va en la entidad
+             contenedora; el cilindro hijo gira sobre su propio eje Y
+             local, que tras esa orientación queda alineado con el
+             eje horizontal (efecto de "rodillo girando"). -->
+        <a-entity position="-3 0.6 0" rotation="0 0 90">
+          <a-cylinder radius="0.2" height="1.4" color="#FFC65D"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 800; easing: linear">
+          </a-cylinder>
+        </a-entity>
+        <a-entity position="3 0.6 0" rotation="0 0 90">
+          <a-cylinder radius="0.2" height="1.4" color="#FFC65D"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 800; easing: linear">
+          </a-cylinder>
+        </a-entity>
+        <!-- Pieza transportada (a-box = azul): se desliza de un
+             extremo a otro de la banda, simulando el material en
+             movimiento -->
+        <a-box position="-2.5 0.7 0" width="0.4" height="0.3" depth="0.4" color="#4CC3D9"
+          animation="property: position; from: -2.5 0.7 0; to: 2.5 0.7 0; dir: alternate; loop: true; dur: 3000; easing: linear">
+        </a-box>
       </a-entity>
 
       <!-- ---- Grupo: Tanque de almacenamiento ---- -->
       <a-entity id="tanque-almacenamiento" position="6 0 -6">
-        <!-- Base / plataforma -->
-        <a-box position="0 0.15 0" width="2.4" height="0.3" depth="2.4" color="#555555"></a-box>
-        <!-- Cuerpo del tanque -->
-        <a-cylinder position="0 1.5 0" radius="1" height="2.4" color="#EF2D5E"></a-cylinder>
-        <!-- Tapa superior -->
-        <a-cylinder position="0 2.75 0" radius="1.05" height="0.1" color="#4CC3D9"></a-cylinder>
-        <!-- Indicador de nivel -->
-        <a-sphere position="1.15 1.8 0" radius="0.12" color="#FFC65D"></a-sphere>
+        <!-- Base / plataforma (a-box = azul) -->
+        <a-box position="0 0.15 0" width="2.4" height="0.3" depth="2.4" color="#4CC3D9"></a-box>
+        <!-- Cuerpo del tanque (a-cylinder = amarillo) -->
+        <a-cylinder position="0 1.5 0" radius="1" height="2.4" color="#FFC65D"></a-cylinder>
+        <!-- Tapa superior (a-cylinder = amarillo) -->
+        <a-cylinder position="0 2.75 0" radius="1.05" height="0.1" color="#FFC65D"></a-cylinder>
+        <!-- Indicador de nivel (a-sphere = rojo) -->
+        <a-sphere position="1.15 1.8 0" radius="0.12" color="#EF2D5E"></a-sphere>
       </a-entity>
 
       <!-- ---- Grupo: Brazo robotizado (jerarquía padre-hijo anidada) ---- -->
-      <a-entity id="brazo-robot" position="-6 0 -6">
-        <!-- Base fija -->
-        <a-cylinder position="0 0.3 0" radius="0.8" height="0.6" color="#555555"></a-cylinder>
+      <a-entity id="brazo-robot" position="3 0 -6">
+        <!-- Base fija (a-cylinder = amarillo) -->
+        <a-cylinder position="0 0.3 0" radius="0.8" height="0.6" color="#FFC65D"></a-cylinder>
 
-        <!-- Eslabón 1: gira sobre la base -->
-        <a-entity id="eslabon-1" position="0 0.6 0" rotation="0 20 0">
-          <a-cylinder position="0 0.5 0" radius="0.25" height="1" color="#4CC3D9"></a-cylinder>
+        <!-- Eslabón 1: gira sobre la base (a-cylinder = amarillo).
+             Rotación oscilante en Y simula el giro de la torreta. Al
+             mover este eslabón, TODO lo que cuelga de él (eslabón 2
+             y el efector) se mueve junto con él, demostrando la
+             jerarquía padre-hijo. -->
+        <a-entity id="eslabon-1" position="0 0.6 0" rotation="0 20 0"
+          animation="property: rotation; from: -40 20 0; to: 40 20 0; dir: alternate; loop: true; dur: 2500; easing: easeInOutSine">
+          <a-cylinder position="0 0.5 0" radius="0.25" height="1" color="#FFC65D"></a-cylinder>
 
-          <!-- Eslabón 2: hijo del eslabón 1 -->
-          <a-entity id="eslabon-2" position="0 1 0" rotation="0 0 -30">
-            <a-box position="0 0.6 0" width="0.3" height="1.2" depth="0.3" color="#FFC65D"></a-box>
+          <!-- Eslabón 2: hijo del eslabón 1, sube y baja como un
+               codo articulado (a-box = azul) -->
+          <a-entity id="eslabon-2" position="0 1 0" rotation="0 0 -30"
+            animation="property: rotation; from: 0 0 -50; to: 0 0 -10; dir: alternate; loop: true; dur: 1800; easing: easeInOutSine">
+            <a-box position="0 0.6 0" width="0.3" height="1.2" depth="0.3" color="#4CC3D9"></a-box>
 
-            <!-- Efector final: hijo del eslabón 2 -->
-            <a-entity id="efector-final" position="0 1.2 0" rotation="0 0 20">
+            <!-- Efector final: hijo del eslabón 2, pequeño ajuste
+                 propio para simular la "muñeca" (a-sphere = rojo) -->
+            <a-entity id="efector-final" position="0 1.2 0" rotation="0 0 20"
+              animation="property: rotation; from: 0 0 -10; to: 0 0 50; dir: alternate; loop: true; dur: 1200; easing: easeInOutSine">
               <a-sphere radius="0.2" color="#EF2D5E"></a-sphere>
             </a-entity>
           </a-entity>
@@ -129,15 +171,15 @@
 
       <!-- =========================================================
            PARTE D - Integración de modelo CAD (SolidWorks -> Blender -> GLB)
-           Descomentar esta entidad una vez que el modelo .glb esté
-           cargado en a-assets. Ajustar "position" y "scale" según
-           el tamaño real del ensamblaje exportado.
+           Esta integración se dejó en un archivo separado (cad.html)
+           para no modificar esta versión de index.html, que ya
+           funciona correctamente en las 5 plataformas.
            ========================================================= -->
       <!--
       <a-entity
         gltf-model="#modeloIndustrial"
-        position="0 0 -12"
-        scale="1 1 1">
+        position="12 0 -4"
+        scale="0.001 0.001 0.001">
       </a-entity>
       -->
 
@@ -147,7 +189,7 @@
            cursor: permite interacción por mirada en móvil/VR/Quest.
            ========================================================= -->
       <a-entity id="rig" position="0 1.6 4">
-        <a-camera wasd-controls look-controls>
+        <a-camera position="0 0 0" wasd-controls look-controls>
           <a-cursor color="#FFFFFF"></a-cursor>
         </a-camera>
       </a-entity>
