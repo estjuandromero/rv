@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Banco de control en cascada</title>
+<style>
+:root{
+  --fondo:#14181d; --panel:#1c222a; --linea:#2c353f;
+  --texto:#dfe6ee; --tenue:#7e8c9c;
+  --traza1:#59b0ff; --traza2:#ffc247; --traza3:#ff6b6b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--texto);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:15px;line-height:1.45}
+header{padding:18px 20px 14px;border-bottom:1px solid var(--linea)}
+h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.2px}
+header p{margin:3px 0 0;color:var(--tenue);font-size:13px}
+main{padding:16px 20px 40px;max-width:900px;margin:0 auto}
+.mando{display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+  background:var(--panel);border:1px solid var(--linea);
+  border-radius:8px;padding:14px;margin-bottom:16px}
+input{padding:9px 11px;border-radius:6px;border:1px solid var(--linea);
+  background:#111519;color:var(--texto);font-size:16px}
+#ref{width:105px;font-variant-numeric:tabular-nums}
+#idBanco{width:215px;font-size:14px}
+button{padding:9px 16px;border-radius:6px;border:1px solid var(--linea);
+  background:#252d37;color:var(--texto);font-size:14px;cursor:pointer}
+button:hover{background:#2f3944}
+button:focus-visible,input:focus-visible{outline:2px solid var(--traza1);outline-offset:2px}
+button.principal{background:var(--traza1);border-color:var(--traza1);
+  color:#0c1116;font-weight:600}
+button.principal:hover{background:#7cc1ff}
+.lecturas{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));
+  gap:1px;background:var(--linea);border:1px solid var(--linea);
+  border-radius:8px;overflow:hidden;margin-bottom:18px}
+.lectura{background:var(--panel);padding:11px 13px}
+.lectura span{display:block;color:var(--tenue);font-size:12px;margin-bottom:2px}
+.lectura strong{font-size:20px;font-weight:600;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums}
+figure{margin:0 0 20px}
+figcaption{display:flex;gap:16px;flex-wrap:wrap;align-items:baseline;
+  margin-bottom:7px;font-size:13px}
+figcaption b{font-weight:600;font-size:14px}
+.clave{color:var(--tenue)}
+.clave i{display:inline-block;width:11px;height:3px;border-radius:2px;
+  margin-right:5px;vertical-align:middle;font-style:normal}
+canvas{width:100%;height:190px;display:block;background:var(--panel);
+  border:1px solid var(--linea);border-radius:8px}
+#estado{color:var(--tenue);font-size:13px;margin-left:auto}
+#estado.vivo{color:var(--traza1)}
+#estado.roto{color:var(--traza3)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Banco de control en cascada</h1>
+  <p>Grua-pendulo &middot; muestreo del control 10 ms &middot; telemetria 20 Hz por MQTT</p>
+</header>
+
+<main>
+  <div class="mando">
+    <input id="idBanco" value="romero03" aria-label="Identificador del banco">
+    <button onclick="reconectar()">Conectar</button>
+    <span id="estado">sin conectar</span>
+  </div>
+
+  <div class="mando">
+    <input type="number" id="ref" value="0" step="5" min="-90" max="90" aria-label="Referencia en grados">
+    <button class="principal" onclick="enviar('ref:' + document.getElementById('ref').value)">Mover a esa referencia</button>
+    <button onclick="enviar('stop')">Detener motor</button>
+    <button onclick="enviar('zero')">Recalibrar ceros</button>
+    <button onclick="descargar()">Descargar CSV</button>
+  </div>
+
+  <div class="lecturas">
+    <div class="lectura"><span>Referencia base</span><strong id="v_refb">&mdash;</strong></div>
+    <div class="lectura"><span>Referencia brazo</span><strong id="v_ref">&mdash;</strong></div>
+    <div class="lectura"><span>Brazo</span><strong id="v_pot">&mdash;</strong></div>
+    <div class="lectura"><span>Pendulo</span><strong id="v_as">&mdash;</strong></div>
+    <div class="lectura"><span>PWM</span><strong id="v_pwm">&mdash;</strong></div>
+  </div>
+
+  <figure>
+    <figcaption>
+      <b>Lazo externo &mdash; pendulo</b>
+      <span class="clave"><i style="background:var(--traza1)"></i>error e<sub>AS</sub> [&deg;]</span>
+      <span class="clave"><i style="background:var(--traza2)"></i>control u<sub>AS</sub> [&deg;]</span>
+    </figcaption>
+    <canvas id="c1"></canvas>
+  </figure>
+
+  <figure>
+    <figcaption>
+      <b>Lazo interno &mdash; brazo</b>
+      <span class="clave"><i style="background:var(--traza1)"></i>error e<sub>POT</sub> [&deg;]</span>
+      <span class="clave"><i style="background:var(--traza2)"></i>control u<sub>PD</sub></span>
+      <span class="clave"><i style="background:var(--traza3)"></i>PWM aplicado</span>
+    </figcaption>
+    <canvas id="c2"></canvas>
+  </figure>
+</main>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+const BROKER = 'wss://broker.hivemq.com:8884/mqtt';
+const VENTANA = 600;
+
+let cliente = null;
+let datos = [];
+
+const $ = id => document.getElementById(id);
+
+function estado(txt, clase){
+  const e = $('estado');
+  e.textContent = txt;
+  e.className = clase || '';
+}
+
+function reconectar(){
+  if(cliente) cliente.end(true);
+
+  const id = $('idBanco').value.trim();
+  if(!id){ estado('falta el identificador del banco','roto'); return; }
+
+  estado('conectando al broker');
+  cliente = mqtt.connect(BROKER, {clientId:'web-'+Math.random().toString(16).slice(2)});
+
+  cliente.on('connect', ()=>{
+    cliente.subscribe('cascada/'+id+'/tel');
+    estado('en linea','vivo');
+  });
+
+  cliente.on('message', (t,p)=>{
+    try{
+      const j = JSON.parse(p.toString());
+      for(const s of j.m) datos.push(s);
+      if(datos.length > VENTANA) datos = datos.slice(-VENTANA);
+      pintar();
+    }catch(e){}
+  });
+
+  cliente.on('error', ()=> estado('el broker rechazo la conexion','roto'));
+  cliente.on('close', ()=> estado('conexion cerrada','roto'));
+}
+
+function enviar(msg){
+  if(!cliente || !cliente.connected){ estado('conecta primero','roto'); return; }
+  cliente.publish('cascada/' + $('idBanco').value.trim() + '/cmd', msg);
+}
+
+// indices: 0 t, 1 refPot, 2 pot, 3 as, 4 eAS, 5 uAS, 6 ePot, 7 uPot, 8 pwm
+function pintar(){
+  const u = datos[datos.length-1];
+  const f = (x,d=1)=>x.toFixed(d);
+
+  $('v_refb').textContent = f(u[1]-u[5]);
+  $('v_ref').textContent  = f(u[1]);
+  $('v_pot').textContent  = f(u[2]);
+  $('v_as').textContent   = f(u[3]);
+  $('v_pwm').textContent  = u[8];
+
+  grafica('c1', [[4,'--traza1'],[5,'--traza2']]);
+  grafica('c2', [[6,'--traza1'],[7,'--traza2'],[8,'--traza3']]);
+}
+
+function grafica(id, trazas){
+  const cv = $(id);
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+
+  cv.width = w*dpr; cv.height = h*dpr;
+
+  const g = cv.getContext('2d');
+  g.scale(dpr,dpr);
+  g.clearRect(0,0,w,h);
+
+  let lo = Infinity, hi = -Infinity;
+  for(const s of datos) for(const [i] of trazas){
+    lo = Math.min(lo, s[i]); hi = Math.max(hi, s[i]);
+  }
+  if(!isFinite(lo)){ lo=-1; hi=1; }
+
+  const pad = (hi-lo)*0.12 || 1;
+  lo -= pad; hi += pad;
+
+  const y = v => h - 6 - (v-lo)/(hi-lo)*(h-12);
+  const x = k => k/Math.max(datos.length-1,1)*w;
+
+  const css = getComputedStyle(document.documentElement);
+
+  if(lo < 0 && hi > 0){
+    g.strokeStyle = css.getPropertyValue('--linea');
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0,y(0)); g.lineTo(w,y(0)); g.stroke();
+  }
+
+  for(const [i,color] of trazas){
+    g.strokeStyle = css.getPropertyValue(color).trim();
+    g.lineWidth = 1.6;
+    g.lineJoin = 'round';
+    g.beginPath();
+    datos.forEach((s,k)=>{ k ? g.lineTo(x(k),y(s[i])) : g.moveTo(x(k),y(s[i])); });
+    g.stroke();
+  }
+}
+
+function descargar(){
+  const cab = 't_ms,refPot,pot,as,eAS,uAS,ePot,uPot,pwm\n';
+  const cuerpo = datos.map(s=>s.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([cab+cuerpo],{type:'text/csv'}));
+  a.download = 'cascada.csv';
+  a.click();
+}
+
+reconectar();
+</script>
+</body>
+</html>
