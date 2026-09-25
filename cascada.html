@@ -115,6 +115,15 @@ canvas{width:100%;height:190px;display:block;background:var(--panel);
 
   <figure>
     <figcaption>
+      <b>Posicion real vs referencia (grados vs tiempo)</b>
+      <span class="clave"><i style="background:var(--traza2)"></i>referencia [&deg;]</span>
+      <span class="clave"><i style="background:var(--traza1)"></i>brazo (pot) [&deg;]</span>
+    </figcaption>
+    <canvas id="cPos"></canvas>
+  </figure>
+
+  <figure>
+    <figcaption>
       <b>Lazo externo &mdash; pendulo</b>
       <span class="clave"><i style="background:var(--traza1)"></i>error e<sub>AS</sub> [&deg;]</span>
       <span class="clave"><i style="background:var(--traza2)"></i>control u<sub>AS</sub> [&deg;]</span>
@@ -208,11 +217,12 @@ function pintar(){
   $('v_as').textContent   = f(u[3]);
   $('v_pwm').textContent  = u[8];
 
-  grafica('c1', [[4,'--traza1'],[5,'--traza2']]);
-  grafica('c2', [[6,'--traza1'],[7,'--traza2'],[8,'--traza3']]);
+  grafica('cPos', [[2,'--traza1'],[1,'--traza2']], '&deg;');
+  grafica('c1', [[4,'--traza1'],[5,'--traza2']], '&deg;');
+  grafica('c2', [[6,'--traza1'],[7,'--traza2'],[8,'--traza3']], '');
 }
 
-function grafica(id, trazas){
+function grafica(id, trazas, unidad){
   const cv = $(id);
   const dpr = window.devicePixelRatio || 1;
   const w = cv.clientWidth, h = cv.clientHeight;
@@ -223,6 +233,10 @@ function grafica(id, trazas){
   g.scale(dpr,dpr);
   g.clearRect(0,0,w,h);
 
+  const MARGEN_IZQ = 46, MARGEN_INF = 20, MARGEN_SUP = 8, MARGEN_DER = 8;
+  const wPlot = w - MARGEN_IZQ - MARGEN_DER;
+  const hPlot = h - MARGEN_SUP - MARGEN_INF;
+
   let lo = Infinity, hi = -Infinity;
   for(const s of datos) for(const [i] of trazas){
     lo = Math.min(lo, s[i]); hi = Math.max(hi, s[i]);
@@ -232,17 +246,53 @@ function grafica(id, trazas){
   const pad = (hi-lo)*0.12 || 1;
   lo -= pad; hi += pad;
 
-  const y = v => h - 6 - (v-lo)/(hi-lo)*(h-12);
-  const x = k => k/Math.max(datos.length-1,1)*w;
+  const y = v => MARGEN_SUP + hPlot - (v-lo)/(hi-lo)*hPlot;
+  const x = k => MARGEN_IZQ + k/Math.max(datos.length-1,1)*wPlot;
 
   const css = getComputedStyle(document.documentElement);
+  const colorTenue = css.getPropertyValue('--tenue').trim();
+  const colorLinea = css.getPropertyValue('--linea').trim();
 
-  if(lo < 0 && hi > 0){
-    g.strokeStyle = css.getPropertyValue('--linea');
-    g.lineWidth = 1;
-    g.beginPath(); g.moveTo(0,y(0)); g.lineTo(w,y(0)); g.stroke();
+  // ---- Rejilla y etiquetas del eje Y (valores) ----
+  g.strokeStyle = colorLinea;
+  g.fillStyle = colorTenue;
+  g.font = '11px system-ui,sans-serif';
+  g.textAlign = 'right';
+  g.textBaseline = 'middle';
+  g.lineWidth = 1;
+
+  const N_TICKS_Y = 4;
+  for(let i=0;i<=N_TICKS_Y;i++){
+    const val = lo + (hi-lo)*i/N_TICKS_Y;
+    const yy = y(val);
+    g.beginPath();
+    g.moveTo(MARGEN_IZQ, yy);
+    g.lineTo(w-MARGEN_DER, yy);
+    g.stroke();
+    g.fillText(val.toFixed(1), MARGEN_IZQ-6, yy);
   }
 
+  // ---- Etiquetas del eje X (tiempo, segundos desde la primera muestra visible) ----
+  g.textAlign = 'center';
+  g.textBaseline = 'top';
+  if(datos.length > 1){
+    const t0 = datos[0][0];
+    const N_TICKS_X = 4;
+    for(let i=0;i<=N_TICKS_X;i++){
+      const k = Math.round(i/N_TICKS_X*(datos.length-1));
+      const seg = ((datos[k][0]-t0)/1000).toFixed(1);
+      g.fillText(seg+'s', x(k), h-MARGEN_INF+4);
+    }
+  }
+
+  // ---- Linea de cero, si aplica ----
+  if(lo < 0 && hi > 0){
+    g.strokeStyle = colorLinea;
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(MARGEN_IZQ,y(0)); g.lineTo(w-MARGEN_DER,y(0)); g.stroke();
+  }
+
+  // ---- Trazas ----
   for(const [i,color] of trazas){
     g.strokeStyle = css.getPropertyValue(color).trim();
     g.lineWidth = 1.6;
